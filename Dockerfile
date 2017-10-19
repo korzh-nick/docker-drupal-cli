@@ -2,17 +2,11 @@ FROM blinkreaction/drupal-base:jessie
 
 MAINTAINER Leonid Makarov <leonid.makarov@blinkreaction.com>
 
-# Include git-lfs repo
-RUN curl -sSL https://packagecloud.io/github/git-lfs/gpgkey | apt-key add - && \
-    echo 'deb https://packagecloud.io/github/git-lfs/debian/ jessie main' > /etc/apt/sources.list.d/github_git-lfs.list && \
-    echo 'deb-src https://packagecloud.io/github/git-lfs/debian/ jessie main' >> /etc/apt/sources.list.d/github_git-lfs.list
-
 # Basic packages
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes --no-install-recommends install \
     zip unzip \
     git \
-    git-lfs \
     mysql-client \
     imagemagick \
     pv \
@@ -20,6 +14,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     openssh-server \
     rsync \
     apt-transport-https \
+    ca-certificates \
     sudo \
     # Cleanup
     && DEBIAN_FRONTEND=noninteractive apt-get clean && \
@@ -40,30 +35,35 @@ RUN mkdir /var/run/sshd & \
     echo "export VISIBLE=now" >> /etc/profile
 ENV NOTVISIBLE "in users profile"
 
-# Include blackfire.io repo
-RUN curl -sSL https://packagecloud.io/gpg.key | apt-key add - && \
-    echo "deb http://packages.blackfire.io/debian any main" | tee /etc/apt/sources.list.d/blackfire.list
+# Add Dotdeb PHP7.0 repo
+# RUN echo 'deb http://packages.dotdeb.org jessie all' >> /etc/apt/sources.list && \
+#     echo 'deb-src http://packages.dotdeb.org jessie all' >> /etc/apt/sources.list && \
+#     # Dotdeb repo key
+#     wget http://www.dotdeb.org/dotdeb.gpg && apt-key add dotdeb.gpg && rm -f dotdeb.gpg
+
+# Add sury.org PHP7.1 repo
+RUN  echo 'deb https://packages.sury.org/php/ jessie main' >> /etc/apt/sources.list && \
+    wget https://packages.sury.org/php/apt.gpg && apt-key add apt.gpg && rm -f apt.gpg
 
 # PHP packages
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes --no-install-recommends install \
-    php5-common \
-    php5-cli \
+    php7.1-common \
+    php7.1-cli \
     php-pear \
-    php5-mysql \
-    php5-imagick \
-    php5-mcrypt \
-    php5-curl \
-    php5-gd \
-    php5-sqlite \
-    php5-json \
-    php5-intl \
-    php5-fpm \
-    php5-memcache \
-    php5-xdebug \
-    php5-ssh2 \
-    php5-gnupg \
-    blackfire-php \
+    php7.1-mysql \
+    php7.1-imagick \
+    php7.1-mcrypt \
+    php7.1-curl \
+    php7.1-gd \
+    php7.1-sqlite3 \
+    php7.1-json \
+    php7.1-intl \
+    php7.1-fpm \
+    php7.1-memcache \
+    php7.1-xdebug \
+    php7.1-opcache \
+    php7.1-mbstring \
     # Cleanup
     && DEBIAN_FRONTEND=noninteractive apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -71,37 +71,35 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
 ## PHP settings
 RUN mkdir -p /var/www/docroot && \
     # PHP-FPM settings
-    ## /etc/php5/fpm/php.ini
-    sed -i '/memory_limit = /c memory_limit = 256M' /etc/php5/fpm/php.ini && \
-    sed -i '/max_execution_time = /c max_execution_time = 300' /etc/php5/fpm/php.ini && \
-    sed -i '/upload_max_filesize = /c upload_max_filesize = 500M' /etc/php5/fpm/php.ini && \
-    sed -i '/post_max_size = /c post_max_size = 500M' /etc/php5/fpm/php.ini && \
-    sed -i '/error_log = /c error_log = \/dev\/stdout' /etc/php5/fpm/php.ini && \
-    sed -i '/;always_populate_raw_post_data/c always_populate_raw_post_data = -1' /etc/php5/fpm/php.ini && \
-    sed -i '/;sendmail_path/c sendmail_path = /bin/true' /etc/php5/fpm/php.ini && \
-    ## /etc/php5/fpm/pool.d/www.conf
-    sed -i '/user = /c user = docker' /etc/php5/fpm/pool.d/www.conf && \
-    sed -i '/;catch_workers_output = /c catch_workers_output = yes' /etc/php5/fpm/pool.d/www.conf && \
-    sed -i '/listen = /c listen = 0.0.0.0:9000' /etc/php5/fpm/pool.d/www.conf && \
-    sed -i '/listen.allowed_clients/c ;listen.allowed_clients =' /etc/php5/fpm/pool.d/www.conf && \
-    sed -i '/;clear_env = /c clear_env = no' /etc/php5/fpm/pool.d/www.conf && \
-    ## /etc/php5/fpm/php-fpm.conf
-    sed -i '/;daemonize = /c daemonize = no' /etc/php5/fpm/php-fpm.conf && \
-    sed -i '/error_log = /c error_log = \/dev\/stdout' /etc/php5/fpm/php-fpm.conf && \
+    ## /etc/php/7.1/fpm/php.ini
+    sed -i '/memory_limit = /c memory_limit = 256M' /etc/php/7.1/fpm/php.ini && \
+    sed -i '/max_execution_time = /c max_execution_time = 300' /etc/php/7.1/fpm/php.ini && \
+    sed -i '/upload_max_filesize = /c upload_max_filesize = 500M' /etc/php/7.1/fpm/php.ini && \
+    sed -i '/post_max_size = /c post_max_size = 500M' /etc/php/7.1/fpm/php.ini && \
+    sed -i '/error_log = /c error_log = \/dev\/stdout' /etc/php/7.1/fpm/php.ini && \
+    sed -i '/;always_populate_raw_post_data/c always_populate_raw_post_data = -1' /etc/php/7.1/fpm/php.ini && \
+    sed -i '/;sendmail_path/c sendmail_path = /bin/true' /etc/php/7.1/fpm/php.ini && \
+    ## /etc/php/7.1/fpm/pool.d/www.conf
+    sed -i '/user = /c user = docker' /etc/php/7.1/fpm/pool.d/www.conf && \
+    sed -i '/;catch_workers_output = /c catch_workers_output = yes' /etc/php/7.1/fpm/pool.d/www.conf && \
+    sed -i '/listen = /c listen = 0.0.0.0:9000' /etc/php/7.1/fpm/pool.d/www.conf && \
+    sed -i '/listen.allowed_clients/c ;listen.allowed_clients =' /etc/php/7.1/fpm/pool.d/www.conf && \
+    sed -i '/;clear_env = /c clear_env = no' /etc/php/7.1/fpm/pool.d/www.conf && \
+    ## /etc/php/7.1/fpm/php-fpm.conf
+    sed -i '/;daemonize = /c daemonize = no' /etc/php/7.1/fpm/php-fpm.conf && \
+    sed -i '/error_log = /c error_log = \/dev\/stdout' /etc/php/7.1/fpm/php-fpm.conf && \
+    sed -i '/pid = /c pid = \/run\/php-fpm7.1.pid' /etc/php/7.1/fpm/php-fpm.conf && \
     # PHP CLI settings
-    sed -i '/memory_limit = /c memory_limit = 512M' /etc/php5/cli/php.ini && \
-    sed -i '/max_execution_time = /c max_execution_time = 600' /etc/php5/cli/php.ini && \
-    sed -i '/error_log = php_errors.log/c error_log = \/dev\/stdout' /etc/php5/cli/php.ini && \
-    sed -i '/;sendmail_path/c sendmail_path = /bin/true' /etc/php5/cli/php.ini && \
+    sed -i '/memory_limit = /c memory_limit = 512M' /etc/php/7.1/cli/php.ini && \
+    sed -i '/max_execution_time = /c max_execution_time = 600' /etc/php/7.1/cli/php.ini && \
+    sed -i '/error_log = php_errors.log/c error_log = \/dev\/stdout' /etc/php/7.1/cli/php.ini && \
+    sed -i '/;sendmail_path/c sendmail_path = /bin/true' /etc/php/7.1/cli/php.ini && \
+    # Make xdebug available for php-fpm only
+    rm  /etc/php/7.1/cli/conf.d/20-xdebug.ini && \
     # PHP module settings
-    echo 'opcache.memory_consumption=128' >> /etc/php5/mods-available/opcache.ini && \
-    sed -i '/blackfire.agent_socket = /c blackfire.agent_socket = tcp://blackfire:8707' /etc/php5/mods-available/blackfire.ini && \
-    # Disable xdebug by default. We will enabled it at startup (see startup.sh)
-    php5dismod xdebug
+    echo 'opcache.memory_consumption=128' >> /etc/php/7.1/mods-available/opcache.ini
 
-# xdebug settings
-ENV XDEBUG_ENABLED 0
-COPY config/php5/xdebug.ini /etc/php5/mods-available/xdebug.ini
+COPY config/php/xdebug.ini /etc/php/7.1/mods-available/xdebug.ini
 
 # Adding NodeJS repo (for up-to-date versions)
 # This is a stripped down version of the official nodejs install script (https://deb.nodesource.com/setup_4.x)
@@ -124,30 +122,28 @@ RUN gem install bundler
 # Home directory for bundle installs
 ENV BUNDLE_PATH .bundler
 
-ENV COMPOSER_VERSION 1.2.0
-ENV DRUSH_VERSION 8.1.3
-ENV DRUPAL_CONSOLE_VERSION 1.0.0-beta5
-ENV MHSENDMAIL_VERSION 0.2.0
+ENV DRUSH_VERSION 8.1.15
+ENV DRUPAL_CONSOLE_VERSION 1.0.2
+
 RUN \
     # Composer
-    curl -sSL https://github.com/composer/composer/releases/download/$COMPOSER_VERSION/composer.phar -o /usr/local/bin/composer && \
+    curl -sSL https://getcomposer.org/installer | php && \
+    mv composer.phar /usr/local/bin/composer && \
     # Drush 8 (default)
     curl -sSL https://github.com/drush-ops/drush/releases/download/$DRUSH_VERSION/drush.phar -o /usr/local/bin/drush && \
+    chmod +x /usr/local/bin/drush && \
     # Drupal Console
     curl -sSL https://github.com/hechoendrupal/DrupalConsole/releases/download/$DRUPAL_CONSOLE_VERSION/drupal.phar -o /usr/local/bin/drupal && \
-    # mhsendmail for MailHog integration
-    curl -sSL https://github.com/mailhog/mhsendmail/releases/download/v$MHSENDMAIL_VERSION/mhsendmail_linux_amd64 -o /usr/local/bin/mhsendmail && \
-    # Make all binaries executable
-    chmod +x /usr/local/bin/*
+    chmod +x /usr/local/bin/drupal
 
 # All further RUN commands will run as the "docker" user
 USER docker
 ENV HOME /home/docker
 
 # Install nvm and a default node version
-ENV NVM_VERSION 0.31.6
-ENV NODE_VERSION 4.5.0
-ENV NVM_DIR $HOME/.nvm
+ENV NVM_VERSION=0.33.4 \
+	NODE_VERSION=6.11.3 \
+	NVM_DIR=$HOME/.nvm
 RUN \
     curl -sSL https://raw.githubusercontent.com/creationix/nvm/v${NVM_VERSION}/install.sh | bash && \
     . $NVM_DIR/nvm.sh && \
@@ -155,7 +151,10 @@ RUN \
     nvm alias default $NODE_VERSION && \
     # Install global node packages
     npm install -g npm && \
-    npm install -g bower
+	# Cleanup
+	nvm clear-cache && npm cache clear --force && \
+	# Fix npm complaining about permissions and not being able to update
+        sudo rm -rf $HOME/.config
 
 ENV PATH $PATH:$HOME/.composer/vendor/bin
 RUN \
@@ -190,8 +189,6 @@ WORKDIR /var/www
 
 # Default SSH key name
 ENV SSH_KEY_NAME id_rsa
-# ssh-agent proxy socket (requires blinkreaction/ssh-agent)
-ENV SSH_AUTH_SOCK /.ssh-agent/proxy-socket
 
 # Starter script
 ENTRYPOINT ["/opt/startup.sh"]
